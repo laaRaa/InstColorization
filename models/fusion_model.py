@@ -83,13 +83,39 @@ class FusionModel(BaseModel):
         self.fake_B_reg = self.comp_B_reg
 
     def forward(self):
-        (_, feature_map) = self.netG(self.real_A, self.hint_B, self.mask_B)
+        (_, self.comp_B_reg) = self.netGComp(self.full_real_A, self.full_hint_B, self.full_mask_B)
+        (self.instance_B_reg, feature_map) = self.netG(self.real_A, self.hint_B, self.mask_B)
         self.fake_B_reg = self.netGF(self.full_real_A, self.full_hint_B, self.full_mask_B, feature_map, self.box_info_list)
-        
+
+    #def forward(self):
+    #    (_, feature_map) = self.netG(self.real_A, self.hint_B, self.mask_B)
+    #    self.fake_B_reg = self.netGF(self.full_real_A, self.full_hint_B, self.full_mask_B, feature_map, self.box_info_list)
+
     def save_current_imgs(self, path):
+	# save instance image
+        print(self.instance_B_reg.size())
+        print(self.real_A.size())
+        print(torch.squeeze(self.instance_B_reg[0],0).size())
+        b, c, h, w = self.instance_B_reg.size()
+        for i in range(b):
+            out_img = torch.clamp(util.lab2rgb(torch.cat((torch.unsqueeze(self.real_A[i,:,:,:],0).type(torch.cuda.FloatTensor), torch.unsqueeze(self.instance_B_reg[i,:,:,:],0).type(torch.cuda.FloatTensor)), dim=1), self.opt), 0.0, 1.0)
+            out_img = np.transpose(out_img.cpu().data.numpy()[0], (1, 2, 0))
+            io.imsave(os.path.join(path + '.instance_' + str(i) + '.png'), img_as_ubyte(out_img))
+
+	# save complete image before fusion
+        out_img = torch.clamp(util.lab2rgb(torch.cat((self.full_real_A.type(torch.cuda.FloatTensor), self.comp_B_reg.type(torch.cuda.FloatTensor)), dim=1), self.opt), 0.0, 1.0)
+        out_img = np.transpose(out_img.cpu().data.numpy()[0], (1, 2, 0))
+        io.imsave(os.path.join(path + '.complete.png'), img_as_ubyte(out_img))
+
+	# save complete image after fusion
         out_img = torch.clamp(util.lab2rgb(torch.cat((self.full_real_A.type(torch.cuda.FloatTensor), self.fake_B_reg.type(torch.cuda.FloatTensor)), dim=1), self.opt), 0.0, 1.0)
         out_img = np.transpose(out_img.cpu().data.numpy()[0], (1, 2, 0))
         io.imsave(path, img_as_ubyte(out_img))
+        
+    #def save_current_imgs(self, path):
+    #    out_img = torch.clamp(util.lab2rgb(torch.cat((self.full_real_A.type(torch.cuda.FloatTensor), self.fake_B_reg.type(torch.cuda.FloatTensor)), dim=1), self.opt), 0.0, 1.0)
+    #    out_img = np.transpose(out_img.cpu().data.numpy()[0], (1, 2, 0))
+    #    io.imsave(path, img_as_ubyte(out_img))
 
     def setup_to_test(self, fusion_weight_path):
         GF_path = 'checkpoints/{0}/latest_net_GF.pth'.format(fusion_weight_path)
