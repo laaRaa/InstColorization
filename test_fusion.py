@@ -34,9 +34,9 @@ if __name__ == '__main__':
     print('#Testing images = %d' % dataset_size)
 
     model = create_model(opt)
-    # model.setup_to_test('coco_finetuned_mask_256')
-    model.setup_to_test('coco_finetuned_mask_256_ffs')
-    # model.setup_to_test('coco_mask')
+    #model.setup_to_test('coco_finetuned_mask_256')
+    #model.setup_to_test('coco_finetuned_mask_256_ffs')
+    model.setup_to_test('coco_mask')
 
     count_empty = 0
     for data_raw in tqdm(dataset_loader, dynamic_ncols=True):
